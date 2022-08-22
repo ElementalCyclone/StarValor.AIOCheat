@@ -8,7 +8,7 @@ An BepInEx plugin for Star Valor for spawning items, locking ships stat, infinit
 
 **1. Requirement :**
 
-- [BepInEx](https://docs.bepinex.dev/articles/user_guide/installation/index.html) and [BepInEx.ConfigurationManager](https://github.com/BepInEx/BepInEx.ConfigurationManager) installed to your game
+- [BepInEx](https://docs.bepinex.dev/articles/user_guide/installation/index.html) and [BepInEx.ConfigurationManager](https://github.com/BepInEx/BepInEx.ConfigurationManager) installed to your game (as-per Star Valor 2.0.2b, you will need 32-bit version of BepInEx)
 
 **2. Installation :**
 
