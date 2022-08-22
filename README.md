@@ -39,3 +39,7 @@ This library project depends on several NuGet packages and several directly refe
 The project is configured to looks for the required assemblies inside `<.csproj root folder>/Libs` folder. You can fulfill those dependencies simply by copying the files into it or creating symbolic link inside the folder.
 
 Consult the build/Visual Studio error message or the `.csproj` file for the full list of the required dependencies.
+
+------------------------------
+
+This mods and especially its Unlimited Skill Points & Reset feature is heavily inspired by Steam User's, Mortichar, [mod](https://steamcommunity.com/app/833360/discussions/4/3177855357754392918/)
