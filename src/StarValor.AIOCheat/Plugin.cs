@@ -28,21 +28,20 @@ namespace ElementalCyclone.UnityMod.StarValor.AIOCheat
         /// <summary>
         /// Contant for Plugin's human readable name/short name
         /// </summary>
-        public const string Info_Name = "Star Valor AIO Cheat";
+        public const string Info_Name = "AIO Cheat";
         /// <summary>
         /// Constant for current Plugin's version
         /// </summary>
-        public const string Info_Version = "0.8.0";
-
-        /// <summary>
-        /// reference to <see cref="Harmony"/> instance
-        /// </summary>
-        protected static Harmony instance_Harmony = null;
+        public const string Info_Version = "0.8.1";
 
         /// <summary>
         /// Approximate in-game UI character length for a 'Tab' character
         /// </summary>
         protected const int tabCharCount = 8;
+        /// <summary>
+        /// reference to <see cref="Harmony"/> instance
+        /// </summary>
+        protected Harmony instance_Harmony = null;
         /// <summary>
         /// Dictionary of cheats that is enabled and need to be 'enforced' in every frame.
         /// </summary>
@@ -192,7 +191,15 @@ namespace ElementalCyclone.UnityMod.StarValor.AIOCheat
             set;
         }
 
-        public Plugin()
+        /// <summary>
+        /// Initialize a new instance of <see cref="Plugin"/>.
+        /// </summary>
+        /// <remarks>
+        /// As any other derivative of <see cref="BaseUnityPlugin"/>, this type is not supposed to be manually initialized and referenced/stored. 
+        /// <para/>
+        /// To get an instance of this type, try to get it from BepInEx's root <see cref="UnityEngine.GameObject.GetComponent{T}"/>
+        /// </remarks>
+        public Plugin() : base()
         {
             spawnDefn_ObjectType = new ConfigDefinition(sectionName_Scond, "Spawn Type");
             spawnDefn_RarityLvel = new ConfigDefinition(sectionName_Scond, "Rarity Level");
@@ -355,6 +362,7 @@ namespace ElementalCyclone.UnityMod.StarValor.AIOCheat
                 Config.Bind(sectionName_First, "Set : Energy Gen.", CurrRef_PlayerShip?.stats?.energyGenerated ?? 0, new ConfigDescription("Set ship's energy generation. 0 - 1000000.", new AcceptableValueRange<float>(0, 1000000), new Libs.ConfigurationManagerAttributes() { Order = 100 - 11 }));
                 Config.Bind(sectionName_First, "Set : Weapon Space", CurrRef_PlayerShip?.shipData?.weaponSpace ?? 0, new ConfigDescription($"Set ship's total weapon space. {CurrRef_PlayerShip?.shipData?.weaponSpace ?? 0} - 1000.", new AcceptableValueRange<float>(0, 1000), new Libs.ConfigurationManagerAttributes() { Order = 100 - 12 }));
                 Config.Bind(sectionName_First, "Set : Equip Space", CurrRef_PlayerShip?.shipData?.equipmentSpace ?? 0, new ConfigDescription($"Set ship's total equipment space. {CurrRef_PlayerShip?.shipData?.weaponSpace ?? 0} - 1000.", new AcceptableValueRange<int>(0, 1000), new Libs.ConfigurationManagerAttributes() { Order = 100 - 13 }));
+                Config.Bind(sectionName_First, "Set : XP Multiplier", 1.0f, new ConfigDescription($"Set XP gain multiplier to base earned XP, before any perks or crew modifiers. 0.0x - 100.0x.", new AcceptableValueRange<float>(0f, 100f), new Libs.ConfigurationManagerAttributes() { Order = 100 - 14 }));
 
                 Config.Bind(spawnDefn_ObjectType, "", spawnDesc_ObjectType);
 
@@ -382,286 +390,494 @@ namespace ElementalCyclone.UnityMod.StarValor.AIOCheat
                 {
                     Action addedAct = null;
 
-                    if (isReset)
+                    if (e.ChangedSetting.SettingType == typeof(bool))
                     {
-                        if (!enforcedCheats.TryRemove(e.ChangedSetting.Definition.Key, out var _))
-                        {
-                            Logger.LogWarning($"{nameof(OnConfigSettingsChanged)}() | Cannot remove an item from \"{nameof(enforcedCheats)}\", this might results in unexpected behaviour.");
-                        }
-                    }
+                        var nVal = (bool)e.ChangedSetting.BoxedValue;
 
-                    switch (e.ChangedSetting.Definition.Key)
-                    {
-                        case "Unlimited Armor":
+                        switch (e.ChangedSetting.Definition.Key)
                         {
-                            if (!isReset)
+                            case "Unlimited Armor":
                             {
-                                addedAct = new Action(() =>
+                                if (nVal)
                                 {
-                                    CurrRef_PlayerShip.stats.baseHP = aMillion;
-                                    CurrRef_PlayerShip.baseHP = aMillion;
-                                    CurrRef_PlayerShip.currHP = aMillion;
-                                });
-                            }
-                            else
-                            {
-                                // TODO : Make reset state
-                            }
-                            break;
-                        }
-                        case "Unlimited Energy":
-                        {
-                            if (!isReset)
-                            {
-                                addedAct = new Action(() =>
-                                {
-                                    CurrRef_PlayerShip.stats.baseEnergy = aMillion;
-                                    CurrRef_PlayerShip.stats.currEnergy = aMillion;
-                                });
-                            }
-                            else
-                            {
-                                // TODO : Make reset state
-                            }
-                            break;
-                        }
-                        case "Unlimited Shield":
-                        {
-                            if (!isReset)
-                            {
-                                addedAct = new Action(() =>
-                                {
-                                    if (CurrRef_PlayerShip.shipData.equipments.Any(x => EquipmentDB.GetEquipment(x.equipmentID).type == EquipmentType.Shield))
+                                    addedAct = new Action(() =>
                                     {
-                                        CurrRef_PlayerShip.stats.baseShield = aMillion;
-                                        CurrRef_PlayerShip.stats.currShield = aMillion;
-                                    }
-                                });
-                            }
-                            else
-                            {
-                                // TODO : Make reset state
-                            }
-                            break;
-                        }
-                        case "Unlimited Credit":
-                        {
-                            if (!isReset)
-                            {
-                                addedAct = new Action(() =>
+                                        CurrRef_PlayerShip.stats.baseHP = aMillion;
+                                        CurrRef_PlayerShip.baseHP = aMillion;
+                                        CurrRef_PlayerShip.currHP = aMillion;
+                                    });
+                                }
+                                else
                                 {
-                                    CurrRef_PlayerCargo.credits = aBillion;
-                                });
-                            }
-                            // Ponders : Should return to previous value on disable ?
-                            break;
-                        }
-                        case "Unlimited Skill Points & Reset":
-                        {
-                            if (!isReset)
-                            {
-                                // TODO : Make reset state
-                                addedAct = new Action(() =>
-                                {
-                                    PChar.Char.skillPoints = 99;
-                                    PChar.Char.resetSkillsPoints = 99;
-                                });
-                            }
-                            // Ponders : Should return to previous value on disable ?
-                            break;
-                        }
-                        case "Super Weapon":
-                        {
-                            if (!isReset)
-                            {
-                                addedAct = new Action(() =>
-                                {
-                                    Parallel.For(0, CurrRef_PlayerShip.weapons.Count, (idx) =>
+                                    var key = e.ChangedSetting.Definition.Key;
+                                    enforcedCheats.TryRemove(key, out var _);
+                                    addedAct = new Action(() =>
                                     {
-                                        CurrRef_PlayerShip.weapons[idx].damage = 10000;
-                                        CurrRef_PlayerShip.weapons[idx].range = 500;
-                                        //CurrRef_PlayerShip.weapons[idx].wRef.range = 500;
-                                        CurrRef_PlayerShip.weapons[idx].heatGen = 0;
-                                        CurrRef_PlayerShip.weapons[idx].wRef.canHitProjectiles = true;
-                                        if (CurrRef_PlayerShip.weapons[idx].chargeTime > 0)
+                                        //var refModel = ShipDB.GetModel(CurrRef_PlayerShip.shipData.shipModelID);
+                                        var nStat = new ShipStats(CurrRef_PlayerShip);
+                                        CurrRef_PlayerShip.stats.baseHP = nStat.baseHP;
+                                        CurrRef_PlayerShip.baseHP = nStat.baseHP;
+                                        CurrRef_PlayerShip.currHP = nStat.baseHP;
+
+                                        if (!enforcedCheats.TryRemove(key, out var _))
                                         {
-                                            CurrRef_PlayerShip.weapons[idx].wRef.chargeTime = 0;
-                                            //CurrRef_PlayerShip.weapons[idx].chargeTime = 0;
-                                        }
-                                        if (CurrRef_PlayerShip.weapons[idx].wRef.turnSpeed > 0)
-                                        {
-                                            CurrRef_PlayerShip.weapons[idx].wRef.turnSpeed = 120;
-                                        }
-                                        else if ((CurrRef_PlayerShip.weapons[idx].wRef.compType != WeaponCompType.BeamWeaponObject) && (CurrRef_PlayerShip.weapons[idx].wRef.compType != WeaponCompType.MineObject))
-                                        {
-                                            CurrRef_PlayerShip.weapons[idx].projSpeed = CurrRef_PlayerShip.weapons[idx].wRef.speed * 25;
-                                            //CurrRef_PlayerShip.weapons[idx].wRef.speed = 125;
+                                            Logger.LogWarning($"{nameof(enforcedCheats)} | Cannot clean-up for {e.ChangedSetting.Definition.Section}:{key}, expect unexpected behaviour.");
                                         }
                                     });
-                                });
+                                }
+                                break;
                             }
-                            else
+                            case "Unlimited Energy":
                             {
-                                // TODO : Make reset state
-                            }
-                            break;
-                        }
-                        case "Super Warp":
-                        {
-                            if (!isReset)
-                            {
-                                addedAct = new Action(() =>
+                                if (nVal)
                                 {
-                                    CurrRef_PlayerShip.warpCooldown = 0;
-                                    CurrRef_PlayerShip.stats.warpCooldownTime = 0;
-                                    CurrRef_PlayerShip.towWarpCooldown = 0;
-                                    CurrRef_PlayerShip.stats.warpDistance = 5000;
-                                    CurrRef_PlayerShip.stats.warpCostPerSector = 0;
-                                    CurrRef_PlayerShip.stats.warpTowageCapacity = aMillion;
-                                });
-                            }
-                            else
-                            {
-                                // TODO : Make reset state
-                            }
-                            break;
-                        }
-                        case "Super Cargo":
-                        {
-                            if (!isReset)
-                            {
-                                addedAct = new Action(() =>
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.stats.baseEnergy = aMillion;
+                                        CurrRef_PlayerShip.stats.currEnergy = aMillion;
+                                    });
+                                }
+                                else
                                 {
-                                    CurrRef_PlayerCargo.cargoSpace = 10000;
-                                    CurrRef_PlayerCargo.passengerSpace = 10000;
-                                });
-                            }
-                            else
-                            {
-                                // TODO : Make reset state
-                            }
-                            break;
-                        }
-                        case "Set : Max Speed":
-                        {
-                            if (!isReset)
-                            {
-                                addedAct = new Action(() =>
-                                {
-                                    CurrRef_PlayerShip.stats.maxSpeed = (float)e.ChangedSetting.BoxedValue;
-                                });
-                            }
-                            else
-                            {
-                                CurrRef_PlayerShip.stats.maxSpeed = (float)e.ChangedSetting.DefaultValue;
-                            }
+                                    var key = e.ChangedSetting.Definition.Key;
+                                    enforcedCheats.TryRemove(key, out var _);
+                                    addedAct = new Action(() =>
+                                    {
+                                        var nStat = new ShipStats(CurrRef_PlayerShip);
+                                        CurrRef_PlayerShip.stats.baseEnergy = nStat.baseEnergy;
+                                        CurrRef_PlayerShip.stats.currEnergy = nStat.currEnergy;
 
-                            break;
-                        }
-                        case "Set : Acceleration":
-                        {
-                            if (!isReset)
+                                        if (!enforcedCheats.TryRemove(key, out var _))
+                                        {
+                                            Logger.LogWarning($"{nameof(enforcedCheats)} | Cannot clean-up for {e.ChangedSetting.Definition.Section}:{key}, expect unexpected behaviour.");
+                                        }
+                                    });
+                                }
+                                break;
+                            }
+                            case "Unlimited Shield":
                             {
-                                addedAct = new Action(() =>
+                                if (!isReset)
                                 {
-                                    CurrRef_PlayerShip.stats.acceleration = (float)e.ChangedSetting.BoxedValue;
-                                });
-                            }
-                            else
-                            {
-                                CurrRef_PlayerShip.stats.acceleration = (float)e.ChangedSetting.DefaultValue;
-                            }
-                            break;
-                        }
-                        case "Set : Turn Speed":
-                        {
-                            if (!isReset)
-                            {
-                                addedAct = new Action(() =>
+                                    addedAct = new Action(() =>
+                                    {
+                                        if (CurrRef_PlayerShip.shipData.equipments.Any(x => EquipmentDB.GetEquipment(x.equipmentID).type == EquipmentType.Shield))
+                                        {
+                                            CurrRef_PlayerShip.stats.baseShield = aMillion;
+                                            CurrRef_PlayerShip.stats.currShield = aMillion;
+                                        }
+                                    });
+                                }
+                                else
                                 {
-                                    CurrRef_PlayerShip.stats.turnSpeed = (float)e.ChangedSetting.BoxedValue;
-                                    CurrRef_PlayerShip.baseTurnSpeed = (float)e.ChangedSetting.BoxedValue;
-                                });
+                                    var key = e.ChangedSetting.Definition.Key;
+                                    enforcedCheats.TryRemove(key, out var _);
+                                    addedAct = new Action(() =>
+                                    {
+                                        var nStat = new ShipStats(CurrRef_PlayerShip);
+                                        CurrRef_PlayerShip.stats.baseShield = nStat.baseShield;
+                                        CurrRef_PlayerShip.stats.currShield = nStat.currShield;
+
+                                        if (!enforcedCheats.TryRemove(key, out var _))
+                                        {
+                                            Logger.LogWarning($"{nameof(enforcedCheats)} | Cannot clean-up for {e.ChangedSetting.Definition.Section}:{key}, expect unexpected behaviour.");
+                                        }
+                                    });
+                                }
+                                break;
                             }
-                            else
+                            case "Unlimited Credit":
                             {
-                                CurrRef_PlayerShip.stats.turnSpeed = (float)e.ChangedSetting.DefaultValue;
-                                CurrRef_PlayerShip.baseTurnSpeed = (float)e.ChangedSetting.DefaultValue;
-                            }
-                            break;
-                        }
-                        case "Set : Strafe Speed":
-                        {
-                            if (!isReset)
-                            {
-                                addedAct = new Action(() =>
+                                if (nVal)
                                 {
-                                    CurrRef_PlayerShip.stats.strafeSpeed = (float)e.ChangedSetting.BoxedValue;
-                                });
-                            }
-                            else
-                            {
-                                CurrRef_PlayerShip.stats.strafeSpeed = (float)e.ChangedSetting.DefaultValue;
-                            }
-                            break;
-                        }
-                        case "Set : Energy Gen.":
-                        {
-                            if (!isReset)
-                            {
-                                addedAct = new Action(() =>
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerCargo.credits = aBillion;
+                                    });
+                                }
+                                else
                                 {
-                                    CurrRef_PlayerShip.stats.energyGenerated = (float)e.ChangedSetting.BoxedValue;
-                                });
+                                    // Only un-freezes credit amount
+                                    var key = e.ChangedSetting.Definition.Key;
+                                    if (!enforcedCheats.TryRemove(key, out var _))
+                                    {
+                                        Logger.LogWarning($"{nameof(enforcedCheats)} | Cannot clean-up for {e.ChangedSetting.Definition.Section}:{key}, expect unexpected behaviour.");
+                                    }
+                                }
+                                break;
                             }
-                            else
+                            case "Unlimited Skill Points & Reset":
                             {
-                                CurrRef_PlayerShip.stats.energyGenerated = (float)e.ChangedSetting.DefaultValue;
-                            }
-                            break;
-                        }
-                        case "Set : Weapon Space":
-                        {
-                            if (!isReset)
-                            {
-                                addedAct = new Action(() =>
+                                if (nVal)
                                 {
-                                    CurrRef_PlayerShip.shipData.weaponSpace = (float)e.ChangedSetting.BoxedValue;
-                                });
-                            }
-                            else
-                            {
-                                CurrRef_PlayerShip.shipData.weaponSpace = (float)e.ChangedSetting.DefaultValue;
-                            }
-                            break;
-                        }
-                        case "Set : Equip Space":
-                        {
-                            if (!isReset)
-                            {
-                                addedAct = new Action(() =>
+                                    addedAct = new Action(() =>
+                                    {
+                                        PChar.Char.skillPoints = 99;
+                                        PChar.Char.resetSkillsPoints = 99;
+                                    });
+                                }
+                                else
                                 {
-                                    CurrRef_PlayerShip.shipData.equipmentSpace = (int)e.ChangedSetting.BoxedValue;
-                                });
+                                    // Only un-freezes reset and points count
+                                    var key = e.ChangedSetting.Definition.Key;
+                                    if (!enforcedCheats.TryRemove(key, out var _))
+                                    {
+                                        Logger.LogWarning($"{nameof(enforcedCheats)} | Cannot clean-up for {e.ChangedSetting.Definition.Section}:{key}, expect unexpected behaviour.");
+                                    }
+                                }
+                                // Ponders : Should return to previous value on disable ?
+                                break;
                             }
-                            else
+                            case "Super Weapon":
                             {
-                                CurrRef_PlayerShip.shipData.equipmentSpace = (int)e.ChangedSetting.DefaultValue;
+                                if (nVal)
+                                {
+                                    addedAct = new Action(() =>
+                                    {
+                                        Parallel.For(0, CurrRef_PlayerShip.weapons.Count, (idx) =>
+                                        {
+                                            CurrRef_PlayerShip.weapons[idx].damage = 10000;
+                                            CurrRef_PlayerShip.weapons[idx].range = 500;
+                                            //CurrRef_PlayerShip.weapons[idx].wRef.range = 500;
+                                            CurrRef_PlayerShip.weapons[idx].heatGen = 0;
+                                            CurrRef_PlayerShip.weapons[idx].wRef.canHitProjectiles = true;
+                                            if (CurrRef_PlayerShip.weapons[idx].chargeTime > 0)
+                                            {
+                                                CurrRef_PlayerShip.weapons[idx].wRef.chargeTime = 0;
+                                                //CurrRef_PlayerShip.weapons[idx].chargeTime = 0;
+                                            }
+                                            if (CurrRef_PlayerShip.weapons[idx].wRef.turnSpeed > 0)
+                                            {
+                                                CurrRef_PlayerShip.weapons[idx].wRef.turnSpeed = 120;
+                                            }
+                                            else if ((CurrRef_PlayerShip.weapons[idx].wRef.compType != WeaponCompType.BeamWeaponObject) && (CurrRef_PlayerShip.weapons[idx].wRef.compType != WeaponCompType.MineObject))
+                                            {
+                                                CurrRef_PlayerShip.weapons[idx].projSpeed = CurrRef_PlayerShip.weapons[idx].wRef.speed * 25;
+                                                //CurrRef_PlayerShip.weapons[idx].wRef.speed = 125;
+                                            }
+                                        });
+                                    });
+                                }
+                                else
+                                {
+                                    // TODO : Reset state
+
+                                    var key = e.ChangedSetting.Definition.Key;
+                                    if (!enforcedCheats.TryRemove(key, out var _))
+                                    {
+                                        Logger.LogWarning($"{nameof(enforcedCheats)} | Cannot clean-up for {e.ChangedSetting.Definition.Section}:{key}, expect unexpected behaviour.");
+                                    }
+                                }
+                                break;
                             }
-                            break;
-                        }
-                        default:
-                        {
-                            return;
+                            case "Super Warp":
+                            {
+                                if (!isReset)
+                                {
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.warpCooldown = 0;
+                                        CurrRef_PlayerShip.stats.warpCooldownTime = 0;
+                                        CurrRef_PlayerShip.towWarpCooldown = 0;
+                                        CurrRef_PlayerShip.stats.warpDistance = 5000;
+                                        CurrRef_PlayerShip.stats.warpCostPerSector = 0;
+                                        CurrRef_PlayerShip.stats.warpTowageCapacity = aMillion;
+                                    });
+                                }
+                                else
+                                {
+                                    var key = e.ChangedSetting.Definition.Key;
+                                    enforcedCheats.TryRemove(key, out var _);
+                                    addedAct = new Action(() =>
+                                    {
+                                        var nStat = new ShipStats(CurrRef_PlayerShip);
+                                        CurrRef_PlayerShip.warpCooldown = nStat.warpCooldownTime;
+                                        CurrRef_PlayerShip.stats.warpCooldownTime = nStat.warpCooldownTime;
+                                        // TODO : Find actual reference to tow warp cooldown
+                                        CurrRef_PlayerShip.towWarpCooldown = nStat.warpCooldownTime;
+                                        CurrRef_PlayerShip.stats.warpDistance = nStat.warpDistance;
+                                        CurrRef_PlayerShip.stats.warpCostPerSector = nStat.warpCostPerSector;
+                                        CurrRef_PlayerShip.stats.warpTowageCapacity = nStat.warpTowageCapacity;
+
+                                        if (!enforcedCheats.TryRemove(key, out var _))
+                                        {
+                                            Logger.LogWarning($"{nameof(enforcedCheats)} | Cannot clean-up for {e.ChangedSetting.Definition.Section}:{key}, expect unexpected behaviour.");
+                                        }
+                                    });
+                                }
+                                break;
+                            }
+                            case "Super Cargo":
+                            {
+                                if (nVal)
+                                {
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.stats.modelData.cargoSpace = 1000;
+                                        CurrRef_PlayerShip.stats.modelData.passengers = 1000;
+                                        CurrRef_PlayerCargo.cargoSpace = 10000;
+                                        CurrRef_PlayerCargo.passengerSpace = 10000;
+                                    });
+                                }
+                                else
+                                {
+                                    var key = e.ChangedSetting.Definition.Key;
+                                    enforcedCheats.TryRemove(key, out var _);
+                                    addedAct = new Action(() =>
+                                    {
+                                        //var nStat = new ShipStats(CurrRef_PlayerShip);
+                                        var defRef = ShipDB.GetModel(CurrRef_PlayerShip.stats.modelData.id);
+
+                                        CurrRef_PlayerShip.stats.modelData.cargoSpace = defRef.cargoSpace;
+                                        CurrRef_PlayerShip.stats.modelData.passengers = defRef.passengers;
+                                        CurrRef_PlayerCargo.cargoSpace = defRef.cargoSpace;
+                                        CurrRef_PlayerCargo.passengerSpace = defRef.passengers;
+
+                                        CurrRef_PlayerShip.VerifyShipCargoAndEquipment();
+
+                                        if (!enforcedCheats.TryRemove(key, out var _))
+                                        {
+                                            Logger.LogWarning($"{nameof(enforcedCheats)} | Cannot clean-up for {e.ChangedSetting.Definition.Section}:{key}, expect unexpected behaviour.");
+                                        }
+                                    });
+                                }
+                                break;
+                            }
+                            default:
+                            {
+                                Logger.LogWarning($"{nameof(OnConfigSettingsChanged)}() | Unregistered/unhandled cheat of type bool, {e.ChangedSetting.Definition.Section}:{e.ChangedSetting.Definition.Key}, is invoked");
+                                break;
+                            }
                         }
                     }
-
-                    if (addedAct != null)
+                    else if (e.ChangedSetting.SettingType == typeof(float))
                     {
-                        // If TryAdd = false => Key exist, change instead
-                        if (!enforcedCheats.TryAdd(e.ChangedSetting.Definition.Key, addedAct))
+                        var nVal = (float)e.ChangedSetting.BoxedValue;
+                        var dVal = (float)e.ChangedSetting.DefaultValue;
+
+                        var isRest = (nVal == dVal);
+
+                        switch (e.ChangedSetting.Definition.Key)
                         {
-                            enforcedCheats[e.ChangedSetting.Definition.Key] = addedAct;
+                            case "Set : Max Speed":
+                            {
+                                if (!isRest)
+                                {
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.stats.maxSpeed = nVal;
+                                    });
+                                }
+                                else
+                                {
+                                    enforcedCheats.TryRemove(e.ChangedSetting.Definition.Key, out var _);
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.stats.maxSpeed = dVal;
+
+                                        if (!enforcedCheats.TryRemove(e.ChangedSetting.Definition.Key, out var _))
+                                        {
+                                            Logger.LogWarning($"{nameof(enforcedCheats)} | Cannot clean-up for {e.ChangedSetting.Definition.Section}:{e.ChangedSetting.Definition.Key}, expect unexpected behaviour.");
+                                        }
+                                    });
+                                }
+
+                                break;
+                            }
+                            case "Set : Acceleration":
+                            {
+                                if (!isReset)
+                                {
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.stats.acceleration = nVal;
+                                    });
+                                }
+                                else
+                                {
+                                    enforcedCheats.TryRemove(e.ChangedSetting.Definition.Key, out var _);
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.stats.acceleration = (float)e.ChangedSetting.DefaultValue;
+
+                                        if (!enforcedCheats.TryRemove(e.ChangedSetting.Definition.Key, out var _))
+                                        {
+                                            Logger.LogWarning($"{nameof(enforcedCheats)} | Cannot clean-up for {e.ChangedSetting.Definition.Section}:{e.ChangedSetting.Definition.Key}, expect unexpected behaviour.");
+                                        }
+                                    });
+                                }
+                                break;
+                            }
+                            case "Set : Turn Speed":
+                            {
+                                if (!isReset)
+                                {
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.stats.turnSpeed = nVal;
+                                        CurrRef_PlayerShip.baseTurnSpeed = nVal;
+                                    });
+                                }
+                                else
+                                {
+                                    enforcedCheats.TryRemove(e.ChangedSetting.Definition.Key, out var _);
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.stats.turnSpeed = dVal;
+                                        CurrRef_PlayerShip.baseTurnSpeed = dVal;
+
+                                        if (!enforcedCheats.TryRemove(e.ChangedSetting.Definition.Key, out var _))
+                                        {
+                                            Logger.LogWarning($"{nameof(enforcedCheats)} | Cannot clean-up for {e.ChangedSetting.Definition.Section}:{e.ChangedSetting.Definition.Key}, expect unexpected behaviour.");
+                                        }
+                                    });
+                                }
+                                break;
+                            }
+                            case "Set : Strafe Speed":
+                            {
+                                if (!isReset)
+                                {
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.stats.strafeSpeed = dVal;
+                                    });
+                                }
+                                else
+                                {
+                                    enforcedCheats.TryRemove(e.ChangedSetting.Definition.Key, out var _);
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.stats.strafeSpeed = nVal;
+
+                                        if (!enforcedCheats.TryRemove(e.ChangedSetting.Definition.Key, out var _))
+                                        {
+                                            Logger.LogWarning($"{nameof(enforcedCheats)} | Cannot clean-up for {e.ChangedSetting.Definition.Section}:{e.ChangedSetting.Definition.Key}, expect unexpected behaviour.");
+                                        }
+                                    });
+                                }
+                                break;
+                            }
+                            case "Set : Energy Gen.":
+                            {
+                                if (!isReset)
+                                {
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.stats.energyGenerated = nVal;
+                                    });
+                                }
+                                else
+                                {
+                                    enforcedCheats.TryRemove(e.ChangedSetting.Definition.Key, out var _);
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.stats.energyGenerated = dVal;
+                                        if (!enforcedCheats.TryRemove(e.ChangedSetting.Definition.Key, out var _))
+                                        {
+                                            Logger.LogWarning($"{nameof(enforcedCheats)} | Cannot clean-up for {e.ChangedSetting.Definition.Section}:{e.ChangedSetting.Definition.Key}, expect unexpected behaviour.");
+                                        }
+                                    });
+                                }
+                                break;
+                            }
+                            case "Set : Weapon Space":
+                            {
+                                if (!isReset)
+                                {
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.shipData.weaponSpace = nVal;
+                                        CurrRef_PlayerShip.stats.modelData.weaponSpace = ((int)nVal);
+                                    });
+                                }
+                                else
+                                {
+                                    
+                                    enforcedCheats.TryRemove(e.ChangedSetting.Definition.Key, out var _);
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.stats.modelData.weaponSpace = ((int)dVal);
+                                        CurrRef_PlayerShip.shipData.weaponSpace = dVal;
+                                        CurrRef_PlayerShip.VerifyShipCargoAndEquipment();
+                                        if (!enforcedCheats.TryRemove(e.ChangedSetting.Definition.Key, out var _))
+                                        {
+                                            Logger.LogWarning($"{nameof(enforcedCheats)} | Cannot clean-up for {e.ChangedSetting.Definition.Section}:{e.ChangedSetting.Definition.Key}, expect unexpected behaviour.");
+                                        }
+                                    });
+                                }
+                                break;
+                            }
+                            case "Set : XP Multiplier":
+                            {
+                                Patcher.XPSlider_Multiplier = nVal;
+                                break;
+                            }
+                            default:
+                            {
+                                Logger.LogWarning($"{nameof(OnConfigSettingsChanged)}() | Unregistered/unhandled cheat of type float, {e.ChangedSetting.Definition.Section}:{e.ChangedSetting.Definition.Key}, is invoked");
+                                break;
+                            }
+                        }
+                    }
+                    else if (e.ChangedSetting.SettingType == typeof(int))
+                    {
+                        var nVal = (int)e.ChangedSetting.BoxedValue;
+                        var dVal = (int)e.ChangedSetting.DefaultValue;
+
+                        var isRest = (nVal == dVal);
+
+                        switch (e.ChangedSetting.Definition.Key)
+                        {
+                            case "Set : Equip Space":
+                            {
+                                if (!isRest)
+                                {
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.shipData.equipmentSpace = nVal;
+                                    });
+                                }
+                                else
+                                {
+                                    CurrRef_PlayerShip.shipData.equipmentSpace = (int)e.ChangedSetting.DefaultValue;
+                                    enforcedCheats.TryRemove(e.ChangedSetting.Definition.Key, out var _);
+                                    addedAct = new Action(() =>
+                                    {
+                                        CurrRef_PlayerShip.shipData.equipmentSpace = dVal;
+                                        CurrRef_PlayerShip.VerifyShipCargoAndEquipment();
+                                        if (!enforcedCheats.TryRemove(e.ChangedSetting.Definition.Key, out var _))
+                                        {
+                                            Logger.LogWarning($"{nameof(enforcedCheats)} | Cannot clean-up for {e.ChangedSetting.Definition.Section}:{e.ChangedSetting.Definition.Key}, expect unexpected behaviour.");
+                                        }
+                                    });
+                                }
+                                break;
+                            }
+                            default:
+                            {
+                                Logger.LogWarning($"{nameof(OnConfigSettingsChanged)}() | Unregistered/unhandled cheat of type float, {e.ChangedSetting.Definition.Section}:{e.ChangedSetting.Definition.Key}, is invoked");
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Logger.LogWarning($"{nameof(OnConfigSettingsChanged)}() | Unregistered/unhandled value type of cheat {e.ChangedSetting.Definition.Section}:{e.ChangedSetting.Definition.Key} ({e.ChangedSetting.SettingType.Name}) is invoked");
+                    }
+
+                    if ((addedAct != null) && (!enforcedCheats.TryAdd(e.ChangedSetting.Definition.Key, addedAct)))
+                    {
+                        lock (enforcedCheats)
+                        {
+                            try
+                            {
+                                enforcedCheats[e.ChangedSetting.Definition.Key] = addedAct;
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.LogError($"{nameof(OnConfigSettingsChanged)}() | {ex.GetType().Name}, {ex.Message}\nSource : {ex.Source}\n{ex.StackTrace}\n");
+                            }
                         }
                     }
                 }
@@ -677,52 +893,56 @@ namespace ElementalCyclone.UnityMod.StarValor.AIOCheat
                             Config.Remove(spawnDefn_RarityLvel);
                             Config.Remove(spawnDefn_ObjectName);
 
-                            if (!isReset)
+                            if (!string.IsNullOrWhiteSpace((string)e.ChangedSetting.BoxedValue) || ((string)e.ChangedSetting.BoxedValue != (string)e.ChangedSetting.DefaultValue))
                             {
-                                switch (gameDict_SpawnType[(string)e.ChangedSetting.BoxedValue])
+                                if (gameDict_SpawnType.TryGetValue((string)e.ChangedSetting.BoxedValue, out var keyVal))
                                 {
-                                    case 4:
+                                    switch (keyVal)
                                     {
-                                        Config.Bind(spawnDefn_ObjectName, "", new ConfigDescription("Ship name", new AcceptableValueList<string>(gameDict_ShipID.Keys.ToArray()), confAttr));
-                                        break;
-                                    }
-                                    case 2:
-                                    {
-                                        Config.Bind(spawnDefn_StackCount, 0, spawnDesc_StackCount);
-                                        Config.Bind(spawnDefn_RarityLvel, "", spawnDesc_RarityLvel);
-                                        Config.Bind(spawnDefn_ObjectName, "", new ConfigDescription("Equipment name", new AcceptableValueList<string>(gameDict_EqupID.Keys.ToArray()), confAttr));
-                                        break;
-                                    }
-                                    case 1:
-                                    {
-                                        Config.Bind(spawnDefn_StackCount, 0, spawnDesc_StackCount);
-                                        Config.Bind(spawnDefn_RarityLvel, "", spawnDesc_RarityLvel);
-                                        Config.Bind(spawnDefn_ObjectName, "", new ConfigDescription("Weapon name", new AcceptableValueList<string>(gameDict_WepnID.Keys.ToArray()), confAttr));
-                                        break;
-                                    }
-                                    case 3:
-                                    {
-                                        var currKey = (string)e.ChangedSetting.BoxedValue;
-                                        if (currKey.IndexOf("/") > 0)
+                                        case 4:
                                         {
-                                            Config.Bind(spawnDefn_StackCount, 0, spawnDesc_StackCount);
-                                            Config.Bind(spawnDefn_ObjectName, "", new ConfigDescription("Item name", new AcceptableValueList<string>(gameDict_ItemID.Keys.ToArray()), confAttr));
+                                            Config.Bind(spawnDefn_ObjectName, "", new ConfigDescription("Ship name", new AcceptableValueList<string>(gameDict_ShipID.Keys.ToArray()), confAttr));
+                                            break;
                                         }
-                                        else if (currKey.IndexOf("(Weapon)") > 0)
+                                        case 2:
                                         {
                                             Config.Bind(spawnDefn_StackCount, 0, spawnDesc_StackCount);
-                                            Config.Bind(spawnDefn_ObjectName, "", new ConfigDescription("name of the weapon blueprint", new AcceptableValueList<string>(gameDict_WepnID.Keys.ToArray()), confAttr));
+                                            Config.Bind(spawnDefn_RarityLvel, "", spawnDesc_RarityLvel);
+                                            Config.Bind(spawnDefn_ObjectName, "", new ConfigDescription("Equipment name", new AcceptableValueList<string>(gameDict_EqupID.Keys.ToArray()), confAttr));
+                                            break;
                                         }
-                                        else if (currKey.IndexOf("(Equipment)") > 0)
+                                        case 1:
                                         {
                                             Config.Bind(spawnDefn_StackCount, 0, spawnDesc_StackCount);
-                                            Config.Bind(spawnDefn_ObjectName, "", new ConfigDescription("name of the equipment blueprint", new AcceptableValueList<string>(gameDict_EqupID.Keys.ToArray()), confAttr));
-                                        }   
-                                        break;
-                                    }
-                                    default:
-                                    {
-                                        return;
+                                            Config.Bind(spawnDefn_RarityLvel, "", spawnDesc_RarityLvel);
+                                            Config.Bind(spawnDefn_ObjectName, "", new ConfigDescription("Weapon name", new AcceptableValueList<string>(gameDict_WepnID.Keys.ToArray()), confAttr));
+                                            break;
+                                        }
+                                        case 3:
+                                        {
+                                            var currKey = (string)e.ChangedSetting.BoxedValue;
+                                            if (currKey.IndexOf("/") > 0)
+                                            {
+                                                Config.Bind(spawnDefn_StackCount, 0, spawnDesc_StackCount);
+                                                Config.Bind(spawnDefn_ObjectName, "", new ConfigDescription("Item name", new AcceptableValueList<string>(gameDict_ItemID.Keys.ToArray()), confAttr));
+                                            }
+                                            else if (currKey.IndexOf("(Weapon)") > 0)
+                                            {
+                                                Config.Bind(spawnDefn_StackCount, 0, spawnDesc_StackCount);
+                                                Config.Bind(spawnDefn_ObjectName, "", new ConfigDescription("name of the weapon blueprint", new AcceptableValueList<string>(gameDict_WepnID.Keys.ToArray()), confAttr));
+                                            }
+                                            else if (currKey.IndexOf("(Equipment)") > 0)
+                                            {
+                                                Config.Bind(spawnDefn_StackCount, 0, spawnDesc_StackCount);
+                                                Config.Bind(spawnDefn_ObjectName, "", new ConfigDescription("name of the equipment blueprint", new AcceptableValueList<string>(gameDict_EqupID.Keys.ToArray()), confAttr));
+                                            }
+                                            break;
+                                        }
+                                        default:
+                                        {
+                                            Logger.LogWarning($"{nameof(OnConfigSettingsChanged)}() | Unknown Spawn Type \"{(string)e.ChangedSetting.BoxedValue}\" is invoked");
+                                            return;
+                                        }
                                     }
                                 }
                             }
@@ -734,6 +954,9 @@ namespace ElementalCyclone.UnityMod.StarValor.AIOCheat
                         {
                             if (!isReset)
                             {
+                                // No need gameDict_SpawnType.TryGetValue() check
+                                // since if Spawn Type is unknown/incorrect its next menu wouldn't be populated
+
                                 var spwnKey = Config.FirstOrDefault(x => x.Key.Key == "Spawn Type").Value;
                                 var confObj = Config.FirstOrDefault(x => x.Key.Key == "Object Name").Value;
                                 var confStk = Config.FirstOrDefault(x => x.Key.Key == "Stack Count").Value;
@@ -750,7 +973,7 @@ namespace ElementalCyclone.UnityMod.StarValor.AIOCheat
                                             if ((dmsn != null) && (ship != null) && (CurrRef_Player?.transform != null))
                                             {
                                                 var nPos = CurrRef_Player.transform.position;
-                                                nPos.x += ((dmsn.bounds.size.x > dmsn.bounds.size.z) ? dmsn.bounds.size.x : dmsn.bounds.size.z) + UnityEngine.Random.Range(25, 100);
+                                                nPos.x += ((dmsn.bounds.size.x > dmsn.bounds.size.z) ? dmsn.bounds.size.x : dmsn.bounds.size.z) + UnityEngine.Random.Range(25, 50);
                                                 nPos.z += UnityEngine.Random.Range(-25, 25);
 
                                                 Accessor_CargoLootSystem(CurrRef_PlayerCargo).InstantiateDrop(4, ship.id, ship.rarity, nPos, 1, 0, -1, 0f, -1);
@@ -845,6 +1068,8 @@ namespace ElementalCyclone.UnityMod.StarValor.AIOCheat
                         }
                     }
 
+                    // Spawn menu options changes re-populate ConfigurationMenu displayed options
+                    // Thus its display needs to be refreshed
                     if (CurrRefComp_ConfigurationManager?.DisplayingWindow == true)
                     {
                         CurrRefComp_ConfigurationManager.DisplayingWindow = false;
@@ -938,10 +1163,11 @@ namespace ElementalCyclone.UnityMod.StarValor.AIOCheat
         {
             try
             {
-                instance_Harmony = Harmony.CreateAndPatchAll(typeof(Plugin));
-
                 Config.Clear();
                 Config.SaveOnConfigSet = false;
+
+                Patcher.loggerInstance = Logger;
+                instance_Harmony = Harmony.CreateAndPatchAll(typeof(Patcher));
             }
             catch (Exception ex)
             {
@@ -1012,6 +1238,10 @@ namespace ElementalCyclone.UnityMod.StarValor.AIOCheat
         /// </summary>
         protected virtual void OnDestroy()
         {
+            // Patches's static resets
+            Patcher.loggerInstance = null;
+            Patcher.XPSlider_Multiplier = 1.0f;
+
             Config.SettingChanged -= OnConfigSettingsChanged;
             Config.Clear();
 

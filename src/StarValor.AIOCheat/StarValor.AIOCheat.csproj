@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	<Version>0.8.0</Version>
+	<Version>0.8.1</Version>
 	<Authors>ElementalCyclone</Authors>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>ElementalCyclone.UnityMod.$(MSBuildProjectName)</AssemblyName>
