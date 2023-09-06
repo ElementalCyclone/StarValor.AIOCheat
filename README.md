@@ -1,5 +1,7 @@
 # StarValor AIOCheat
 
+**(Currently not updated, only tested on version 2.0.2b)**
+
 An BepInEx plugin for [Star Valor](https://store.steampowered.com/app/833360/Star_Valor/).
 
 Can be used for spawning items, 'freezing' ships stat, infinite credit, multiply gained XP and such.
